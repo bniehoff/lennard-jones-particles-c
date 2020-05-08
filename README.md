@@ -1,5 +1,5 @@
 # molecular-dynamics
-Molecular Dynamics simulation of a microcanonical ensemble of ~10000 particles subject to Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  It outputs numerous files containing the results of the simulation, such as the energy as a function of temperature, pressure as a function of temperature, velocity distribution of the particles, and final position of the particles.
+Molecular Dynamics simulation (written in C99) of a microcanonical ensemble of ~10000 particles subject to Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  It outputs numerous files containing the results of the simulation, such as the energy as a function of temperature, pressure as a function of temperature, velocity distribution of the particles, and final position of the particles.
 
 By using this output data, one can infer the existence of a phase transition in the system from solid (at low temperatures) to liquid (at higher temperatures.  This is exhibited by a jump in the graph of energy-vs-temperature, as well as by a qualitative difference in the arrangement of the particles at the end of the simulation (a regular crystalline array, vs a random distribution).  See the included Mathematica file, which has also been printed to pdf.
 
