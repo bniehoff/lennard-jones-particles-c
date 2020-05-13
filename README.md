@@ -22,7 +22,9 @@ In output-directory: the file thermo_measurements.csv contains the energy, heat 
 In output-directory/prefix:  Three files:
 
 final_state.csv:  The positions, velocities, and speeds of all particles at the end of simulation.
+
 summary_info.csv:  Various global parameters of the simulation, such as the size of the box and the number of atoms.
+
 time_series.csv:  The temperature, potential energy, total energy, and mean squared displacement of the atoms as a function of time, over the entire simulation.
 
 By using this output data, one can infer the existence of a phase transition in the system from solid (at low temperatures) to liquid (at higher temperatures.  This is exhibited by a jump in the graph of energy-vs-temperature, as well as by a qualitative difference in the arrangement of the particles at the end of the simulation (a regular crystalline array, vs a random distribution).  See the included Mathematica file, which has also been printed to pdf.  (Will create a Jupyter notebook soon that does the same thing, but with more visualizations.)
