@@ -1,5 +1,5 @@
-/* Project 1 - Microcanonical Ensemble Simulation
- * project1.h:  Function prototypes for main program
+/* Microcanonical Ensemble Simulation
+ * md-simulate.h:  Function prototypes for main program
  * 
  * (c) 2008
  * Ben Niehoff
@@ -46,6 +46,17 @@ const double dt = 0.005; /* time step */
 const double Rsmall = 0.01; /* distance (squared) at which to use flat U curve instead of divergent function */
 
 const double PI = 3.14159265358979323846264; /* Archimedes' constant */
+
+/* File paths and prefixes */
+char *output_directory; /* where to output files */
+char *file_prefix; /* prefix to attach to files unique to this run */
+
+char *time_series_path; /* path to relevant data as a function of time */
+char *final_state_path; /* path to final state data */
+char *thermo_meas_path; /* path to thermo measurements as a function of temperature */
+char *summary_info_path; /* basic info like box size and number of particles */
+
+//char *dim_path; /* box dimensions */
 
 /* Global variables */
 double L_s; /* dimension of the volume */
@@ -190,10 +201,16 @@ void RminCheck();
 /* prints out all speeds */
 void SpeedCheck();
 
+/* prints out final state to file */
+void FinalStateToFile();
+
+/* print summary info to file */
+void SummaryInfoToFile();
+
 /* prints out all positions to file */
-void PositionsToFile();
+//void PositionsToFile();
 /* prints out all speeds to file */
-void SpeedsToFile();
+//void SpeedsToFile();
 
 /* writes all collected data to files in batches */
 void BatchFileWrite();

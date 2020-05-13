@@ -1,11 +1,31 @@
 # molecular-dynamics
-Molecular Dynamics simulation (written in C99) of a microcanonical ensemble of ~10000 particles subject to Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  It outputs numerous files containing the results of the simulation, such as the energy as a function of temperature, pressure as a function of temperature, velocity distribution of the particles, and final position of the particles.
+Molecular Dynamics simulation of a microcanonical ensemble of ~10000 particles subject to pairwise Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  The main program is written in C under md-simulate.c, md-simulate.h.  The usage (with defaults) is
 
-By using this output data, one can infer the existence of a phase transition in the system from solid (at low temperatures) to liquid (at higher temperatures.  This is exhibited by a jump in the graph of energy-vs-temperature, as well as by a qualitative difference in the arrangement of the particles at the end of the simulation (a regular crystalline array, vs a random distribution).  See the included Mathematica file, which has also been printed to pdf.
+md-simulate --cellcount 5 --density 0.8 --temperature 0.9 --output-directory "data" --prefix "rho_0.8/T_0.9"
 
-One can adjust the (dimensionless) density and temperature, as well as the number of particles (see below), by editing project1.c and re-compiling.  In the future this may be fixed to allow command-line input instead.
+The numbers given are just some reasonable values that will run quickly.  Change them to whatever you like.  Density and temperature are dimensionless, which means physical constants (like Boltzmann's) have already been absorbed.  "Cellcount" refers to the number of face-centered-cubic crystal cells, along one side of the cubical box, which are used to set up the initial positions of the atoms.  Thus the total number of atoms is
 
-One does not choose the number of particles directly, but instead the number of unit cells along one dimension of the box.  The number of particles is then 4 times the unit cell number cubed.  The larger the simulation, the longer the run time.
+Number of atoms = 4 * (cellcount)^3
+
+since there are 4 atoms in a single unit cell of an FCC lattice.  The output-directory must already exist.  The prefix is a sub-directory of output-directory where the data files of this run will be stored, and it must *also* already exist!  The C program does no checking at all of these conditions.
+
+There is a Python wrapper which runs md-simulate, ensures that the appropriate subdirectories exist, and facilitates sweeping over the parameter range in density and temperature.  Its usage, with defaults, is
+
+python3 batch-simulate.py --cellcount 5 --density-linspace "[0.8, 0.8, 1]" --temperature-linspace "[0.1, 0.9, 5]" --output-directory "data"
+
+There is an optional flag --remove-data which will delete all files in output-directory.  The --density-linspace and --temperature-linspace parameters are in the format of arguments which would be passed to numpy.linspace().  For example "[0.1, 0.9, 5]" means to take 5 samples evenly spaced from 0.1 to 0.9.  The Python script automatically runs md-simulate for each value of density and temperature in the combined sample space, storing the results of individual runs under subdirectories of output-directory.
+
+Files produced:
+
+In output-directory: the file thermo_measurements.csv contains the energy, heat capacity (at constant volume), and pressure, as a function of density and temperature.  The data in this file should be accumulated over many runs.
+
+In output-directory/prefix:  Three files:
+
+final_state.csv:  The positions, velocities, and speeds of all particles at the end of simulation.
+summary_info.csv:  Various global parameters of the simulation, such as the size of the box and the number of atoms.
+time_series.csv:  The temperature, potential energy, total energy, and mean squared displacement of the atoms as a function of time, over the entire simulation.
+
+By using this output data, one can infer the existence of a phase transition in the system from solid (at low temperatures) to liquid (at higher temperatures.  This is exhibited by a jump in the graph of energy-vs-temperature, as well as by a qualitative difference in the arrangement of the particles at the end of the simulation (a regular crystalline array, vs a random distribution).  See the included Mathematica file, which has also been printed to pdf.  (Will create a Jupyter notebook soon that does the same thing, but with more visualizations.)
 
 Some brief discussion of the algorithms:
 

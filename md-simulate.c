@@ -1,7 +1,7 @@
-/* Project 1 - Microcanonical Ensemble Simulation
- * project1.c:  Main program
+/* Microcanonical Ensemble Simulation
+ * md-simulate.c:  Main program
  *
- * gcc -Wall -std=c99 project1.c -lm
+ * gcc -Wall -std=c99 -o md-simulate md-simulate.c -lm
  * 
  * (c) 2008
  * Ben Niehoff
@@ -17,12 +17,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <getopt.h>
 #include <math.h>
 #include <time.h>
 
-#include "project1.h"
+#include "md-simulate.h"
 
-int main() {	
+int main(int argc, char **argv) {	
 	time_t Seed;
 	//char dummy[3];
 	
@@ -37,19 +39,96 @@ int main() {
 	//Seed = 1226117015;
 	srand(Seed);
 	
+	printf("............................................\n");
 	printf(":  Molecular Dynamics Simulation\n");
 	printf(":  Running with random seed %ld\n", (long) Seed);
 	printf(":...........................................\n\n");
 	
-	CellCount = 14;
+	/* some default values, will be overridden by options */
+	CellCount = 5;
 	rho_s = 0.8;
 	T_s = 0.9;
+	
+	output_directory = (char *) malloc(strlen("data") + 1);
+	strcpy(output_directory, "data");
+	
+	file_prefix = (char *) malloc(strlen("rho_0.8/T_0.9") + 1);
+	strcpy(file_prefix, "rho_0.8/T_0.9");
+	
+	/* Get command line arguments */
+	static struct option long_options[] = 
+	{
+		{"cellcount", required_argument, NULL, 'c'},
+		{"density", required_argument, NULL, 'd'},
+		{"temperature", required_argument, NULL, 't'},
+		{"output-directory", required_argument, NULL, 'o'},
+		{"prefix", required_argument, NULL, 'p'},
+		{NULL, 0, NULL, 0}
+	};
+	
+	char ch;
+	while( (ch = getopt_long(argc, argv, "c:d:t:o:p:", long_options, NULL)) != -1 )
+	{
+		// check to see if a single character or long option came through
+		switch(ch)
+		{
+			// We are not doing any error checking on these string conversions!
+			case 'c':
+				CellCount = (int) strtol(optarg, NULL, 10);
+				break;
+			case 'd':
+				rho_s = strtod(optarg, NULL);
+				break;
+			case 't':
+				T_s = strtod(optarg, NULL);
+				break;
+			case 'o':
+				output_directory = (char *) realloc(output_directory, strlen(optarg) + 1);
+				strcpy(output_directory, optarg);
+				break;
+			case 'p':
+				file_prefix = (char *) realloc(file_prefix, strlen(optarg) + 1);
+				strcpy(file_prefix, optarg);
+				break;
+		}
+	}
 	
 	printf("Settings:\n");
 	printf("Cell Count:  %d,  rho_s:  %f,  T_s:  %f\n\n", CellCount, rho_s, T_s);
 	
+	printf("Output directory:  %s\n", output_directory);
+	printf("File prefix:  %s\n", file_prefix);
+	
+	//Let's just verify it gets the arguments
+	//exit(0);
+	
+	/* Assemble all file paths and prepare data directory */
+	/* We assume that the column headings for all these .csv files are
+	 * provided by the external Python script! */
+	time_series_path = (char *) malloc(strlen(output_directory) + 1 + strlen(file_prefix) + 1 + strlen("time_series.csv") + 1);
+	sprintf(time_series_path, "%s/%s/time_series.csv", output_directory, file_prefix);
+	
+	final_state_path = (char *) malloc(strlen(output_directory) + 1 + strlen(file_prefix) + 1 + strlen("final_state.csv") + 1);
+	sprintf(final_state_path, "%s/%s/final_state.csv", output_directory, file_prefix);
+	
+	summary_info_path = (char *) malloc(strlen(output_directory) + 1 + strlen(file_prefix) + 1 + strlen("summary_info.csv") + 1);
+	sprintf(summary_info_path, "%s/%s/summary_info.csv", output_directory, file_prefix);
+	
+	//dim_path = (char *) malloc(strlen(output_directory) + 1 + strlen(file_prefix) + 1 + strlen("box_dimension.dat") + 1);
+	//sprintf(dim_path, "%s/%s/box_dimension.dat", output_directory, file_prefix);
+	
+	thermo_meas_path = (char *) malloc(strlen(output_directory) + 1 + strlen("thermo_measurements.csv") + 1);
+	sprintf(thermo_meas_path, "%s/thermo_measurements.csv", output_directory);
+	
+	
+	/* Now run the simulation */
+	
 	/* Set up initial system */
 	Initialize();
+	
+	/* Print initialization info to file */
+	/* Actually, delay this till after simulation just to be consistent */
+	//SummaryInfoToFile();
 	
 	//PositionCheck();
 	
@@ -73,12 +152,7 @@ int main() {
 	Diagnostic();
 	RminCheck();
 	ForceCheck();
-	
-	remove("./data/temperature.dat");
-	remove("./data/potential.dat");
-	remove("./data/total_energy.dat");
-	remove("./data/msd.dat");
-			
+				
 	printf("Start simulation\n");
 	
 	last_rescale = 0;
@@ -172,8 +246,11 @@ int main() {
 	
 	
 	BatchFileWrite();
-	PositionsToFile();
-	SpeedsToFile();
+	FinalStateToFile();
+	SummaryInfoToFile();
+	
+	//PositionsToFile();
+	//SpeedsToFile();
 		
 	Time = 1000.0 * (End - Start) / CLOCKS_PER_SEC;
 	Time /= (double) ActualIterations;
@@ -187,24 +264,28 @@ int main() {
 	/* Free allocated Memory */
 	FreeAll();
 	
+	/* Free file path strings */
+	free(output_directory);
+	free(file_prefix);
+	
+	free(thermo_meas_path);
+	free(time_series_path);
+	free(final_state_path);
+	free(summary_info_path);
+	
+	//free(dim_path);
+	
 	return 0;
 }
 
 /* writes all collected data to files in batches */
 void BatchFileWrite() {
-	FILE *temp;
-	FILE *pot;
-	FILE *energy;
-	FILE *msd;
+	FILE *time_series_file;
 	
 	long Index;
 	int max;
 	
-	temp = fopen("./data/temperature.dat", "a");
-	pot = fopen("./data/potential.dat", "a");
-	energy = fopen("./data/total_energy.dat", "a");
-	msd = fopen("./data/msd.dat", "a");
-	
+	time_series_file = fopen(time_series_path, "a");	
 	
 	/* write data to files */
 	if (batch_index > 0) {
@@ -216,16 +297,15 @@ void BatchFileWrite() {
 	for (int i=0; i < max; i++) {
 		Index = Iteration + (i - max) * SAMPLE_RATE;
 		
-		fprintf(temp, "%ld\t%e\n", Index, T_array[i]);
-		fprintf(pot, "%ld\t%e\n", Index, U_array[i] / AtomCount);
-		fprintf(energy, "%ld\t%e\n", Index, E_array[i]/ AtomCount);
-		fprintf(msd, "%ld\t%e\n", Index, MSD_array[i]);
+		fprintf(time_series_file, "%ld,%e,%e,%e,%e\n",
+			Index,
+			T_array[i],
+			U_array[i] / AtomCount,
+			E_array[i]/ AtomCount,
+			MSD_array[i]);
 	}
 	
-	fclose(temp);
-	fclose(pot);
-	fclose(energy);
-	fclose(msd);
+	fclose(time_series_file);
 	
 	return;
 }
@@ -261,31 +341,125 @@ double MaxVelocity() {
 
 /* prints out pressure, specific heat */
 void PrintThermoQuantities() {
-	FILE *ef;
-	FILE *cvf;
-	FILE *pf;
+	FILE *thermo_meas_file;
 	
-	double Tsi;
+	//double Tsi;
 	
-	ef = fopen("./data/energy_vs_temperature.dat", "a");
-	cvf = fopen("./data/cv_vs_temperature.dat", "a");
-	pf = fopen("./data/pressure_vs_temperature.dat", "a");
+	thermo_meas_file = fopen(thermo_meas_path, "a");
+	
+	if(thermo_meas_file == NULL) {
+		printf("Cannot open %s\n", thermo_meas_path);
+	}
 		
 	for (int i=0; i < sample_index; i++) {
 		//Tsi = T[i] * epsilon / kB;
-		fprintf(ef, "%e\t%e\n", T[i], E[i]);
-		fprintf(cvf, "%e\t%e\n", T[i], Cv[i]);
-		fprintf(pf, "%e\t%e\n", T[i], P[i]);
+		fprintf(thermo_meas_file, "%e,%e,%e,%e,%e\n",
+			rho_s, T[i], E[i], Cv[i], P[i]);
 	}
 	
-	fclose(ef);
-	fclose(cvf);
-	fclose(pf);
+	fclose(thermo_meas_file);
 	
 	printf("Thermodynamic quantities recorded to files\n");
 	
 	return;
 }
+
+/* print summary info to file */
+void SummaryInfoToFile() {
+	FILE *summary_info_file;
+	
+	summary_info_file = fopen(summary_info_path, "a");
+	fprintf(summary_info_file, "%d,%e,%d,%d,%d,%e\n",
+		CellCount,
+		L_s,
+		AtomCount,
+		BlockCount,
+		BlocksPerSide,
+		BlockSize);
+	fclose(summary_info_file);
+	
+	return;
+}
+
+/* prints final state to file */
+void FinalStateToFile() {
+	FILE *final_state_file;
+	//FILE *summary_info_file;
+	
+	//FILE *dim;
+	
+	//summary_info_file = fopen(summary_info_path, "a");
+	//fprintf(summary_info_file, "%d,%e,%d,%d,%d,%e\n",
+		//CellCount,
+		//L_s,
+		//AtomCount,
+		//BlockCount,
+		//BlocksPerSide,
+		//BlockSize);
+	//fclose(summary_info_file);
+	
+	//dim = fopen(dim_path, "w");
+	//fprintf(dim, "%e\n", L_s);
+	//fclose(dim);
+	
+	final_state_file = fopen(final_state_path, "a");
+	
+	if(final_state_file == NULL) {
+		printf("Cannot open %s\n", final_state_path);
+	}
+	
+	for (int i=0; i < AtomCount; i++) {
+		fprintf(final_state_file, "%e,%e,%e,%e,%e,%e,%e\n",
+			R[i][x], R[i][y], R[i][z],
+			V[i][x], V[i][y], V[i][z],
+			sqrt(V[i][x] * V[i][x] + V[i][y] * V[i][y] + V[i][z] * V[i][z]) );
+	}
+	
+	fclose(final_state_file);
+	
+	return;
+}
+
+/* prints out all positions to file */
+//void PositionsToFile() {
+	//FILE *pfile;
+	//FILE *dim;
+	
+	////dim = fopen("./data/box_dimension.dat", "w");
+	//dim = fopen(dim_path, "w");
+	//fprintf(dim, "%e\n", L_s);
+	//fclose(dim);
+	
+	////pfile = fopen("./data/final_positions.dat", "w");
+	//pfile = fopen(pfile_path, "w");
+	
+	//for (int i=0; i < AtomCount; i++) {
+		//fprintf(pfile, "%e\t%e\t%e\n", R[i][x], R[i][y], R[i][z]);
+	//}
+	
+	//fclose(pfile);
+	
+	//return;
+//}
+
+/* prints out all speeds to file */
+//void SpeedsToFile() {
+	//double speed;
+	//FILE *sfile;
+	
+	////sfile = fopen("./data/final_speeds.dat", "w");
+	//sfile = fopen(sfile_path, "w");
+	
+	//for (int i=0; i < AtomCount; i++) {
+		//speed = sqrt(V[i][x] * V[i][x] + V[i][y] * V[i][y] + V[i][z] * V[i][z]);
+		////speed *= sigma / tau;
+		//fprintf(sfile, "%f\n", speed);
+	//}
+	
+	//fclose(sfile);
+	
+	//return;
+//}
 
 /* Do one iteration of integration algorithm on a single block */
 void VelocityVerletFirstHalf(int bi, int bj, int bk) {
@@ -1406,44 +1580,6 @@ void PositionCheck() {
 	for (int i=0; i < AtomCount; i++) {
 		printf("  R[%d] = (%f, %f, %f)\n", i, R[i][x], R[i][y], R[i][z]);
 	}
-	
-	return;
-}
-
-/* prints out all positions to file */
-void PositionsToFile() {
-	FILE *pfile;
-	FILE *dim;
-	
-	dim = fopen("./data/box_dimension.dat", "w");
-	fprintf(dim, "%e\n", L_s);
-	fclose(dim);
-	
-	pfile = fopen("./data/final_positions.dat", "w");
-	
-	for (int i=0; i < AtomCount; i++) {
-		fprintf(pfile, "%e\t%e\t%e\n", R[i][x], R[i][y], R[i][z]);
-	}
-	
-	fclose(pfile);
-	
-	return;
-}
-
-/* prints out all speeds to file */
-void SpeedsToFile() {
-	double speed;
-	FILE *sfile;
-	
-	sfile = fopen("./data/final_speeds.dat", "w");
-	
-	for (int i=0; i < AtomCount; i++) {
-		speed = sqrt(V[i][x] * V[i][x] + V[i][y] * V[i][y] + V[i][z] * V[i][z]);
-		//speed *= sigma / tau;
-		fprintf(sfile, "%f\n", speed);
-	}
-	
-	fclose(sfile);
 	
 	return;
 }
