@@ -1,5 +1,7 @@
 # molecular-dynamics
-Molecular Dynamics simulation of a microcanonical ensemble of ~10000 particles subject to pairwise Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  The main program is written in C under md-simulate.c, md-simulate.h.  The usage (with defaults) is
+Molecular Dynamics simulation of a microcanonical ensemble of ~10000 particles subject to pairwise Lennard-Jones interactions, within a cubical box with periodic boundary conditions.  See the Jupyter notebook Molecular-Dynamics.ipynb for analysis the simulation and the output it produces.
+
+The main program is written in C under md-simulate.c, md-simulate.h.  The usage (with defaults) is
 
 md-simulate --cellcount 5 --density 0.8 --temperature 0.9 --output-directory "data" --prefix "rho_0.8/T_0.9"
 
