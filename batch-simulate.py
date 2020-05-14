@@ -45,6 +45,28 @@ for opt, val in opts:
 	elif opt in ['-o', '--output-directory']:
 		output_directory = val
 
+# Compute density and temperature values
+densities = np.linspace(*density_linspace)
+temperatures = np.linspace(*temperature_linspace)
+
+# Check for ranges of density and temperature before proceeding
+print('Batch simulate: Ready to run simulation for densities:\n    '
+	'{}\nand temperatures :\n    {}'.format(densities, temperatures))
+print('This will result in a total of {} runs '
+	'with {} particles each'.format(len(densities) * len(temperatures), 4 * cellcount ** 3))
+print('All files will be stored in {}'.format(output_directory))
+if remove_data:
+	print('You have chosen to DELETE all files in {}'.format(output_directory))
+
+confirm = input('Ready to proceed? (y/n): ')
+
+if confirm not in ['y', 'Y']:
+	print('Batch simulate: Simulation will NOT proceed')
+	print('No files/directories have been created or destroyed')
+	exit()
+else:
+	print('Batch simulate: Simulation WILL proceed')
+
 # First make sure ./data directory exists
 if not os.path.exists(output_directory):
 	print('Batch simulate:', output_directory, 'does not exist')
@@ -70,18 +92,7 @@ if not os.path.exists(os.path.join(output_directory, 'thermo_measurements.csv'))
 	thermo_meas_file.write('Density,Temp,Energy,HeatCapCv,Pressure\n')
 	thermo_meas_file.close()
 
-# Run the code
-print('Batch simulate: Ready to run simulation for densities '
-	'in {} and temperatures in {}'.format(density_linspace, temperature_linspace))
 print('Batch simulate: Beginning simulation now...')
-
-#exit()
-
-densities = np.linspace(*density_linspace)
-temperatures = np.linspace(*temperature_linspace)
-
-#print(densities)
-#print(temperatures
 
 #temperatures = np.linspace(0.1,0.9,num=17)
 #temperatures = [0.1, 0.3, 0.5, 0.7, 0.9]
